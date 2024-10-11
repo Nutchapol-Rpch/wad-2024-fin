@@ -14,11 +14,3 @@ export async function POST(request) {
   const customer = await Customer.create(data);
   return NextResponse.json(customer);
 }
-
-export async function PUT(request) {
-  await dbConnect();
-  const { id, ...updateData } = await request.json();
-  const customer = await Customer.findByIdAndUpdate(id, updateData, { new: true });
-  return NextResponse.json(customer);
-}
-
