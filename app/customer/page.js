@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions } from '@mui/material';
+import { Table, TableBody, TableCell, TableContainer, TableHead, TableRow, Paper, Button, TextField, Dialog, DialogTitle, DialogContent, DialogActions, Link, Typography } from '@mui/material';
 import { useRouter } from 'next/navigation';
 
 export default function CustomerPage() {
@@ -91,12 +91,14 @@ export default function CustomerPage() {
             {customers.map((customer) => (
               <TableRow key={customer._id}>
                 <TableCell>
-                  <span 
-                    onClick={() => handleCustomerClick(customer._id)}
-                    style={{ cursor: 'pointer', color: 'blue', textDecoration: 'underline' }}
-                  >
-                    {customer.name}
-                  </span>
+                  <Link href={`/customer/${customer._id}`} passHref>
+                    <Typography
+                      component="span"
+                      sx={{ cursor: 'pointer', color: 'primary.main', '&:hover': { textDecoration: 'underline' } }}
+                    >
+                      {customer.name}
+                    </Typography>
+                  </Link>
                 </TableCell>
                 <TableCell>{new Date(customer.birth_date).toLocaleDateString()}</TableCell>
                 <TableCell>{customer.mem_number}</TableCell>

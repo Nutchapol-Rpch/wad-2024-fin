@@ -1,15 +1,13 @@
-"use client";
+'use client';
 
-import { useRouter } from 'next/navigation';
 import { useState, useEffect } from 'react';
-import { TextField, Button } from '@mui/material';
+import { useRouter } from 'next/navigation';
+import { TextField, Button, Paper, Typography, Box } from '@mui/material';
 
-export default function CustomerDetail({ params }) {
+export default function CustomerDetailPage({ params }) {
   const router = useRouter();
   const [customer, setCustomer] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-  const [editMode, setEditMode] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     birth_date: '',
@@ -18,27 +16,25 @@ export default function CustomerDetail({ params }) {
   });
 
   useEffect(() => {
-    const fetchCustomer = async () => {
-      try {
-        setLoading(true);
-        const response = await fetch(`/api/customer/${params.id}`, { cache: "no-store" });
-        if (!response.ok) {
-          throw new Error('Failed to fetch customer data');
-        }
-        const data = await response.json();
-        console.log("Fetched customer data:", data); // Add this line
-        setCustomer(data);
-        setFormData(data);
-      } catch (error) {
-        console.error('Error fetching customer data:', error);
-        setError(error.message);
-      } finally {
-        setLoading(false);
-      }
-    };
-
     fetchCustomer();
-  }, [params.id]);
+  }, []);
+
+  const fetchCustomer = async () => {
+    try {
+      const response = await fetch(`/api/customer/${params.id}`);
+      if (!response.ok) throw new Error('Failed to fetch customer');
+      const data = await response.json();
+      setCustomer(data);
+      setFormData({
+        name: data.name,
+        birth_date: new Date(data.birth_date).toISOString().split('T')[0],
+        mem_number: data.mem_number,
+        interest: data.interest
+      });
+    } catch (error) {
+      console.error('Error fetching customer:', error);
+    }
+  };
 
   const handleInputChange = (e) => {
     setFormData({ ...formData, [e.target.name]: e.target.value });
@@ -52,107 +48,103 @@ export default function CustomerDetail({ params }) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData)
       });
-      if (response.ok) {
-        const updatedCustomer = await response.json();
-        setCustomer(updatedCustomer);
-        setFormData(updatedCustomer);
-        setEditMode(false);
-        alert('Customer updated successfully');
-      } else {
-        throw new Error('Failed to update customer');
-      }
+      if (!response.ok) throw new Error('Failed to update customer');
+      fetchCustomer();
+      setIsEditing(false);
     } catch (error) {
       console.error('Error updating customer:', error);
-      alert('Failed to update customer');
     }
   };
 
-  const handleBack = () => {
-    router.push('/customer');
+  const handleDelete = async () => {
+    if (confirm('Are you sure you want to delete this customer?')) {
+      try {
+        const response = await fetch(`/api/customer/${params.id}`, {
+          method: 'DELETE'
+        });
+        if (!response.ok) throw new Error('Failed to delete customer');
+        router.push('/customer');
+      } catch (error) {
+        console.error('Error deleting customer:', error);
+      }
+    }
   };
 
-  if (loading) {
-    return <div>Loading...</div>;
-  }
-
-  if (error) {
-    return <div>Error: {error}</div>;
-  }
-
-  console.log("Current customer state:", customer); // Add this line
-
-  if (!customer) {
-    return <div>No customer data found</div>;
-  }
+  if (!customer) return <div>Loading...</div>;
 
   return (
-    <div className="m-4">
-      <h1 className="text-2xl font-bold mb-4">Customer Details</h1>
-      {editMode ? (
-        <form onSubmit={handleSubmit} className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-          <TextField
-            name="name"
-            label="Name"
-            value={formData.name}
-            onChange={handleInputChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            name="birth_date"
-            label="Birth Date"
-            type="date"
-            value={formData.birth_date ? new Date(formData.birth_date).toISOString().split('T')[0] : ''}
-            onChange={handleInputChange}
-            fullWidth
-            margin="normal"
-            InputLabelProps={{ shrink: true }}
-          />
-          <TextField
-            name="mem_number"
-            label="Membership Number"
-            value={formData.mem_number}
-            onChange={handleInputChange}
-            fullWidth
-            margin="normal"
-          />
-          <TextField
-            name="interest"
-            label="Interest"
-            value={formData.interest}
-            onChange={handleInputChange}
-            fullWidth
-            margin="normal"
-          />
-          <div className="flex justify-end mt-4">
-            <Button type="submit" variant="contained" color="primary" className="mr-2">
-              Save
-            </Button>
-            <Button onClick={() => setEditMode(false)} variant="outlined">
-              Cancel
-            </Button>
-          </div>
-        </form>
-      ) : (
-        <div className="bg-white shadow-md rounded px-8 pt-6 pb-8 mb-4">
-          <p className="mb-2"><span className="font-bold">Name:</span> {customer.name}</p>
-          <p className="mb-2"><span className="font-bold">Birth Date:</span> {new Date(customer.birth_date).toLocaleDateString()}</p>
-          <p className="mb-2"><span className="font-bold">Membership Number:</span> {customer.mem_number}</p>
-          <p className="mb-2"><span className="font-bold">Interest:</span> {customer.interest}</p>
-          <div className="mt-4">
-            <Button onClick={() => setEditMode(true)} variant="contained" color="primary" className="mr-2">
-              Edit
-            </Button>
-          </div>
-        </div>
-      )}
-      <Button
-        onClick={handleBack}
-        variant="outlined"
-        className="mt-4"
-      >
-        Back to Customers
-      </Button>
-    </div>
+    <Box sx={{ maxWidth: 600, margin: 'auto', mt: 4 }}>
+      <Paper elevation={3} sx={{ p: 3 }}>
+        <Typography variant="h4" gutterBottom>
+          Customer Details
+        </Typography>
+        {isEditing ? (
+          <form onSubmit={handleSubmit}>
+            <TextField
+              name="name"
+              label="Name"
+              value={formData.name}
+              onChange={handleInputChange}
+              fullWidth
+              margin="normal"
+            />
+            <TextField
+              name="birth_date"
+              label="Birth Date"
+              type="date"
+              value={formData.birth_date}
+              onChange={handleInputChange}
+              fullWidth
+              margin="normal"
+              InputLabelProps={{ shrink: true }}
+            />
+            <TextField
+              name="mem_number"
+              label="Membership Number"
+              value={formData.mem_number}
+              onChange={handleInputChange}
+              fullWidth
+              margin="normal"
+            />
+            <TextField
+              name="interest"
+              label="Interest"
+              value={formData.interest}
+              onChange={handleInputChange}
+              fullWidth
+              margin="normal"
+            />
+            <Box sx={{ mt: 2 }}>
+              <Button type="submit" variant="contained" color="primary" sx={{ mr: 1 }}>
+                Save
+              </Button>
+              <Button onClick={() => setIsEditing(false)} variant="outlined">
+                Cancel
+              </Button>
+            </Box>
+          </form>
+        ) : (
+          <>
+            <Typography variant="body1"><strong>Name:</strong> {customer.name}</Typography>
+            <Typography variant="body1"><strong>Birth Date:</strong> {new Date(customer.birth_date).toLocaleDateString()}</Typography>
+            <Typography variant="body1"><strong>Membership Number:</strong> {customer.mem_number}</Typography>
+            <Typography variant="body1"><strong>Interest:</strong> {customer.interest}</Typography>
+            <Box sx={{ mt: 2 }}>
+              <Button onClick={() => setIsEditing(true)} variant="contained" color="primary" sx={{ mr: 1 }}>
+                Edit
+              </Button>
+              <Button onClick={handleDelete} variant="contained" color="error">
+                Delete
+              </Button>
+            </Box>
+          </>
+        )}
+        <Box sx={{ mt: 2 }}>
+          <Button onClick={() => router.push('/customer')} variant="outlined">
+            Back to Customers
+          </Button>
+        </Box>
+      </Paper>
+    </Box>
   );
 }
